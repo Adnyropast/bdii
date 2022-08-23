@@ -139,6 +139,10 @@
                     <button id="shuffle-no-repeat">No Repeat</button>
                 </div>
                 
+                <div title="Reverse the order of the jobs.">
+                    <button id="reverse">Reverse</button>
+                </div>
+                
                 <hr>
                 
                 <div title="Hide all the jobs. Click on the icons to hide/reveal them.">
@@ -256,6 +260,7 @@
         const resetButton = document.querySelector("#reset");
         const shuffleButton = document.querySelector("#shuffle");
         const shuffleNoRepeatButton = document.querySelector("#shuffle-no-repeat");
+        const reverseButton = document.querySelector("#reverse");
         const hideAllButton = document.querySelector("#hide-all");
         const revealAllButton = document.querySelector("#reveal-all");
         const openTxtVerButton = document.querySelector("#open-txt-ver");
@@ -412,6 +417,8 @@
                     this.appendChild(dragOrigin.children[0]);
                     dragOrigin.appendChild(this.children[0]);
                     
+                    updateTxtOutput();
+                    
                     dragOrigin = null;
                 }
             });
@@ -455,6 +462,16 @@
                 
                 return 0;
             }));
+            
+            for(let i = 0; i < swappedImgs.length; ++i) {
+                document.querySelectorAll(".swap-slot")[i].appendChild(swappedImgs[i]);
+            }
+            
+            updateTxtOutput();
+        });
+        
+        reverseButton.addEventListener("click", function() {
+            const swappedImgs = Array.from(document.querySelectorAll(".swapped")).reverse();
             
             for(let i = 0; i < swappedImgs.length; ++i) {
                 document.querySelectorAll(".swap-slot")[i].appendChild(swappedImgs[i]);
