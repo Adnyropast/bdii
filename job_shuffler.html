@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Job Shuffler - Bravely Default II</title>
+        
+        <link rel="icon" href="images/asterisk.png">
+        <link rel="stylesheet" href="css/common-template.css">
+        <link rel="stylesheet" href="css/bdii.css">
+        <style>
+        
+        #outputs {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            
+            padding: 16px;
+            width: 100%;
+            height: 100%;
+            
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        
+        .output {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .job-swap {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            
+            margin: 2px 8px;
+            border-width: 1px;
+            padding: 0px 16px;
+            width: 160px;
+            height: 48px;
+            
+            border-radius: 4px;
+            border-style: solid;
+            border-color: #614027;
+            background-color: #bead7c;
+            box-shadow: inset 0 0 16px #886c35;
+            box-sizing: border-box;
+        }
+        
+        .job-swap img {
+            height: 48px;
+        }
+        
+        .job-swap .swap-slot {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            
+            position: relative;
+        }
+        
+        .job-swap .swap-slot .swapped {
+            cursor: grab;
+        }
+        
+        .job-swap .swap-slot.hidden:after {
+            position: absolute;
+            top: 0;
+            left: 0;
+            
+            width: 100%;
+            height: 100%;
+            
+            border-radius: 1024px;
+            background-color: #58422D;
+            box-shadow: inset 0 0 16px #281D19, 0 0 8px #0000007F;
+            cursor: pointer;
+            
+            content: "";
+        }
+        
+        </style>
+        <style>
+        
+        #txt-ver {
+            display: flex;
+            flex-direction: column;
+            
+            position: absolute;
+            top: 0;
+            left: 0;
+            
+            width: 100%;
+            height: 100%;
+            
+            background-color: #0000007F;
+        }
+        
+        #txt-ver[hidden] {
+            display: none !important;
+        }
+        
+        #txt-ver > .main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            
+            margin: 16px;
+            
+            flex-grow: 1;
+            pointer-events: none;
+        }
+        
+        #txt-ver > .main textarea {
+            width: 512px;
+            height: 256px;
+            
+            pointer-events: initial;
+        }
+        
+        </style>
+    </head>
+    <body>
+        <header></header>
+        
+        <main>
+            <aside>
+                <hr>
+                
+                <div title="Reset all jobs by default.">
+                    <button id="reset">Reset</button>
+                </div>
+                
+                <div title="Shuffle all jobs.">
+                    <button id="shuffle">Shuffle</button>
+                </div>
+                
+                <div title="Ensure all jobs are different from default.">
+                    <button id="shuffle-no-repeat">No Repeat</button>
+                </div>
+                
+                <hr>
+                
+                <div title="Hide all the jobs. Click on the icons to hide/reveal them.">
+                    <button id="hide-all">Hide All</button>
+                </div>
+                
+                <div title="Reveal all the jobs.">
+                    <button id="reveal-all">Reveal All</button>
+                </div>
+                
+                <hr>
+                
+                <div>
+                    <button id="open-txt-ver">Text Version</button>
+                </div>
+                
+                <hr>
+                
+                <label class="dark-area" for="save-on-exit" title="Uses Local Storage to save data. Everything is cleared when this box is unchecked.">
+                    <input type="checkbox" id="save-on-exit">
+                    <span for="save-on-exit">Save on Exit</span>
+                </label>
+                
+            </aside>
+            <section>
+                <div id="outputs"></div>
+            </section>
+            <aside></aside>
+        </main>
+        
+        <footer></footer>
+        
+        <div id="txt-ver" hidden>
+            <div class="main">
+                <textarea id="txt-area"></textarea>
+            </div>
+            
+            <div></div>
+        </div>
+        
+        <script>
+        
+        function array_shuffle(array) {
+            const clone = Array.from(array);
+            array.length = 0;
+            
+            while(clone.length > 0) {
+                const index = Math.floor(Math.random() * clone.length);
+                
+                array.push(clone[index]);
+                clone.splice(index, 1);
+            }
+            
+            return array;
+        }
+        
+        function array_shuffleDifferent(array) {
+            if(array.length === 1) { return array; }
+            
+            const pairs = array.map(function(value, index) {
+                return [index, value];
+            });
+            
+            array.length = 0;
+            
+            let i = 0;
+            const criticalIndex = pairs.length - 2;
+            
+            while(pairs.length > 0) {
+                const picks = pairs.filter(function(pair) {
+                    return pair[0] !== i;
+                });
+                const current = pairs.filter(function(pair) {
+                    return pair[0] === i;
+                }).map(function(pair) {
+                    return pair[1];
+                })[0];
+                
+                let index;
+                
+                if(i === criticalIndex && (index = picks.findIndex(function(pair) {
+                    return pair[0] === i + 1;
+                })) >= 0) {
+                    
+                }
+                
+                else {
+                    index = Math.floor(Math.random() * picks.length);
+                }
+                
+                const pick = picks[index];
+                
+                array.push(pick[1]);
+                
+                index = pairs.findIndex(function(pair) {
+                    return pair[0] === pick[0];
+                });
+                
+                pairs.splice(index, 1);
+                
+                ++i;
+            }
+            
+            return array;
+        }
+        
+        </script>
+        <script>
+        
+        const jobsNames = ["Freelancer", "Black Mage", "White Mage", "Vanguard", "Monk", "Bard", "Beastmaster", "Thief", "Gambler", "Berserker", "Red Mage", "Ranger", "Shieldmaster", "Pictomancer", "Dragoon", "Spiritmaster", "Swordmaster", "Oracle", "Salve-Maker", "Arcanist", "Bastion", "Phantom", "Hellblade", "Bravebearer"];
+        
+        </script>
+        <script>
+        
+        const resetButton = document.querySelector("#reset");
+        const shuffleButton = document.querySelector("#shuffle");
+        const shuffleNoRepeatButton = document.querySelector("#shuffle-no-repeat");
+        const hideAllButton = document.querySelector("#hide-all");
+        const revealAllButton = document.querySelector("#reveal-all");
+        const openTxtVerButton = document.querySelector("#open-txt-ver");
+        const saveOnExitCheckbox = document.querySelector("#save-on-exit");
+        
+        const outputsDiv = document.querySelector("#outputs");
+        
+        const txtVerDiv = document.querySelector("#txt-ver");
+        const txtArea = document.querySelector("#txt-area");
+        
+        function getTxt() {
+            return Array.from(document.querySelectorAll(".swapped")).map(function(element) {
+                return element.getAttribute("data-name");
+            }).join("\n");
+        }
+        
+        function updateTxtOutput() {
+            txtArea.value = getTxt();
+        }
+        
+        function updateFromTxt(text) {
+            const jobs = jobsNames.map(function(jobName) {
+                return [text.indexOf(jobName), jobName];
+            }).filter(function(pair) {
+                return pair[0] >= 0;
+            }).sort(function(x, y) {
+                const a = x[0];
+                const b = y[0];
+                
+                if(a < b) { return -1; }
+                if(a > b) { return +1; }
+                
+                return 0;
+            }).map(function(pair) {
+                return pair[1];
+            });
+            
+            if(jobs.length === jobsNames.length) {
+                const swappedImgs = Array.from(document.querySelectorAll(".swapped")).sort(function(x, y) {
+                    const a = Number(jobs.indexOf(x.getAttribute("data-name")));
+                    const b = Number(jobs.indexOf(y.getAttribute("data-name")));
+                    
+                    if(a < b) { return -1; }
+                    if(a > b) { return +1; }
+                    
+                    return 0;
+                });
+                
+                for(let i = 0; i < swappedImgs.length; ++i) {
+                    document.querySelectorAll(".swap-slot")[i].appendChild(swappedImgs[i]);
+                }
+                
+                updateTxtOutput();
+            } else {
+                updateTxtOutput();
+            }
+        }
+        
+        for(let i = 0; i < jobsNames.length; ++i) {
+            const column = Math.floor(i / (jobsNames.length / 6));
+            
+            while(outputsDiv.childElementCount <= column) {
+                outputsDiv.appendChild((function() {
+                    const div = document.createElement("div");
+                    
+                    div.className = "output";
+                    
+                    return div;
+                })());
+            }
+            
+            const outputDiv = outputsDiv.children[column];
+            
+            outputDiv.appendChild((function() {
+                const element = document.createElement("div");
+                
+                element.className = "job-swap";
+                
+                element.appendChild((function() {
+                    const img = document.createElement("img");
+                    
+                    img.className = "initial";
+                    img.setAttribute("data-name", jobsNames[i]);
+                    
+                    img.src = "images/jobicons/" + ("00" + i).slice(-2) + ".png";
+                    
+                    return img;
+                })());
+                
+                element.appendChild((function() {
+                    const text = document.createElement("text");
+                    
+                    text.style["white-space"] = "pre";
+                    
+                    text.innerText = "  ▶  ";
+                    
+                    return text;
+                })());
+                
+                element.appendChild((function() {
+                    const span = document.createElement("span");
+                    
+                    span.className = "swap-slot";
+                    
+                    span.appendChild((function() {
+                        const img = document.createElement("img");
+                        
+                        img.className = "swapped";
+                        
+                        img.setAttribute("data-name", jobsNames[i]);
+                        img.title = jobsNames[i];
+                        
+                        img.src = "images/jobicons/" + ("00" + i).slice(-2) + ".png";
+                        
+                        return img;
+                    })());
+                    
+                    return span;
+                })());
+                
+                return element;
+            })());
+        }
+        
+        updateTxtOutput();
+        
+        let dragOrigin = null;
+        
+        Array.from(document.querySelectorAll(".swap-slot")).forEach(function(span) {
+            span.addEventListener("click", function() {
+                if(this.classList.contains("hidden")) {
+                    this.classList.remove("hidden");
+                } else {
+                    this.classList.add("hidden");
+                }
+            });
+            
+            span.addEventListener("dragstart", function(event) {
+                if(!this.classList.contains("hidden")) {
+                    dragOrigin = this;
+                }
+            });
+            
+            span.addEventListener("dragend", function() {
+                dragOrigin = null;
+            });
+            
+            span.addEventListener("dragover", function(event) {
+                event.preventDefault();
+            });
+            
+            span.addEventListener("drop", function(event) {
+                if(dragOrigin !== null && !this.classList.contains("hidden")) {
+                    this.appendChild(dragOrigin.children[0]);
+                    dragOrigin.appendChild(this.children[0]);
+                    
+                    dragOrigin = null;
+                }
+            });
+        });
+        
+        resetButton.addEventListener("click", function() {
+            const imgs = Array.from(document.querySelectorAll(".swapped")).sort(function(x, y) {
+                const a = Number(jobsNames.indexOf(x.getAttribute("data-name")));
+                const b = Number(jobsNames.indexOf(y.getAttribute("data-name")));
+                
+                if(a < b) { return -1; }
+                if(a > b) { return +1; }
+                
+                return 0;
+            });
+            
+            for(let i = 0; i < imgs.length; ++i) {
+                document.querySelectorAll(".swap-slot")[i].appendChild(imgs[i]);
+            }
+            
+            updateTxtOutput();
+        });
+        
+        shuffleButton.addEventListener("click", function() {
+            const swappedImgs = array_shuffle(Array.from(document.querySelectorAll(".swapped")));
+            
+            for(let i = 0; i < swappedImgs.length; ++i) {
+                document.querySelectorAll(".swap-slot")[i].appendChild(swappedImgs[i]);
+            }
+            
+            updateTxtOutput();
+        });
+        
+        shuffleNoRepeatButton.addEventListener("click", function() {
+            const swappedImgs = array_shuffleDifferent(Array.from(document.querySelectorAll(".swapped")).sort(function(x, y) {
+                const a = Number(jobsNames.indexOf(x.getAttribute("data-name")));
+                const b = Number(jobsNames.indexOf(y.getAttribute("data-name")));
+                
+                if(a < b) { return -1; }
+                if(a > b) { return +1; }
+                
+                return 0;
+            }));
+            
+            for(let i = 0; i < swappedImgs.length; ++i) {
+                document.querySelectorAll(".swap-slot")[i].appendChild(swappedImgs[i]);
+            }
+            
+            updateTxtOutput();
+        });
+        
+        hideAllButton.addEventListener("click", function() {
+            Array.from(document.querySelectorAll(".swap-slot")).forEach(function(element) {
+                element.classList.add("hidden");
+            });
+        });
+        
+        revealAllButton.addEventListener("click", function() {
+            Array.from(document.querySelectorAll(".swap-slot")).forEach(function(element) {
+                element.classList.remove("hidden");
+            });
+        });
+        
+        openTxtVerButton.addEventListener("click", function() {
+            txtVerDiv.hidden = !txtVerDiv.matches("[hidden]");
+        });
+        
+        txtVerDiv.addEventListener("mousedown", function(event) {
+            if(event.target === this) {
+                txtVerDiv.hidden = true;
+            }
+        });
+        
+        txtArea.addEventListener("change", function() {
+            updateFromTxt(this.value);
+        });
+        
+        addEventListener("keydown", function(event) {
+            if(event.key.match(/^t$/i)) {
+                openTxtVerButton.click();
+            }
+            
+            if(!txtVerDiv.matches("[hidden]") && event.keyCode === 27) {
+                txtVerDiv.hidden = true;
+            }
+        });
+        
+        </script>
+        <script>
+        
+        {
+            const key = "QkRJSSBKb2IgU2h1ZmZsZXI=";
+            
+            addEventListener("load", function() {
+                const value = localStorage.getItem(key);
+                
+                if(value !== null) {
+                    try {
+                        const data = JSON.parse(value);
+                        
+                        console.log("From last session:", data);
+                        
+                        Array.from(document.querySelectorAll(".swap-slot")).forEach(function(element, index) {
+                            if(data["hidden"][index]) {
+                                element.classList.add("hidden");
+                            } else {
+                                element.classList.remove("hidden");
+                            }
+                        });
+                        
+                        txtArea.value = data["txt"];
+                        
+                        txtArea.dispatchEvent(new Event("change"));
+                        
+                        saveOnExitCheckbox.checked = true;
+                    } catch(e) {
+                        localStorage.removeItem(key);
+                    }
+                } else {
+                    
+                }
+            });
+            
+            addEventListener("beforeunload", function() {
+                if(saveOnExitCheckbox.checked) {
+                    localStorage.setItem(key, JSON.stringify({
+                        "txt": txtArea.value,
+                        "hidden": Array.from(document.querySelectorAll(".swap-slot")).map(function(element) {
+                            return element.classList.contains("hidden");
+                        })
+                    }));
+                } else {
+                    localStorage.removeItem(key);
+                }
+            });
+            
+        }
+        
+        </script>
+    </body>
+</html>
